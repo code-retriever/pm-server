@@ -12,6 +12,9 @@
 - `migrate` CLI command for pm-agent → pm-server transition
 - pyproject.toml classifiers for PyPI
 - `[project.optional-dependencies]` dev section
+- CLAUDE.md auto-management: `pm_init` automatically adds PM Server rules to CLAUDE.md
+- `pm_update_claudemd` MCP tool for updating PM Server rules section
+- `pm-server update-claudemd` CLI command with `--all` flag for batch updates
 
 ### Fixed
 - storage.py YAML header still showing "PM Agent" instead of "PM Server"
@@ -32,9 +35,6 @@
 - Project discovery and auto-registration
 - CLI interface (install, uninstall, serve, discover, status)
 - Claude Code integration via `claude mcp add --scope user`
-- CLAUDE.md auto-management: `pm_init` automatically adds PM Server rules to CLAUDE.md
-- `pm_update_claudemd` MCP tool for updating PM Server rules section
-- `pm-server update-claudemd` CLI command with `--all` flag for batch updates
 
 ### Fixed
 - installer.py: use `claude mcp add` instead of writing to wrong settings file
