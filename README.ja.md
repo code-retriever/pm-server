@@ -1,0 +1,272 @@
+# pm-server
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
+
+**[English README](README.md)**
+
+**Claude Code 用プロジェクト管理 MCP Server**
+
+タスク管理・進捗可視化・意思決定記録を、Claude Code セッション内の自然言語で。
+
+```
+> 進捗は？
+✓ Phase 1 "Backend API": 60% 完了 (12/20 タスク)
+  - 3件 作業中、1件 ブロック中
+  - ベロシティ: 8 タスク/週 (↑ 上昇傾向)
+
+> 次にやること
+1. [P0] MYAPP-014: ユーザー認証エンドポイントの追加
+2. [P1] MYAPP-015: レートリミット実装
+3. [P1] MYAPP-018: インテグレーションテスト作成
+
+> MYAPP-014 に着手
+✓ MYAPP-014 → in_progress
+```
+
+---
+
+## 特徴
+
+- **15の MCP ツール** — タスク CRUD、ステータス、ブロッカー、ベロシティ、ダッシュボード、ADR 等
+- **自然言語で操作** — 「進捗は？」「次にやること」と言うだけ
+- **ゼロ設定** — `pip install` + `pm-server install` で完了。あとは「PM初期化して」と言うだけ
+- **マルチプロジェクト** — グローバルレジストリで全プロジェクトを横断管理
+- **Git フレンドリー** — `.pm/` ディレクトリにプレーン YAML で保存、`git diff` で追跡可能
+- **非侵入的** — プロジェクトに `.pm/` を追加するだけ。`rm -rf .pm/` で完全除去
+
+---
+
+## クイックスタート
+
+### インストール（初回のみ）
+
+```bash
+pip install pm-server
+pm-server install       # Claude Code に MCP サーバーを登録
+# Claude Code を再起動
+```
+
+### プロジェクト初期化
+
+```
+# Claude Code で対象プロジェクトに cd して
+> PM初期化して
+✓ .pm/ 作成
+✓ グローバルレジストリに登録
+✓ 検出: name=my-app, version=1.2.0 (package.json から)
+```
+
+`package.json`、`pyproject.toml`、`Cargo.toml`、`.git/config`、`README.md` からプロジェクト情報を自動検出します。
+
+### 使い方
+
+| 発話例 | 実行される処理 |
+|---|---|
+| `進捗は？` | プロジェクトの進捗サマリを表示 |
+| `次にやること` | 優先度・依存関係から推薦タスクを表示 |
+| `タスク追加：○○を実装` | 新規タスク追加（ID自動採番） |
+| `MYAPP-003 完了` | タスクを done に更新 |
+| `ブロッカーある？` | ブロック中のタスクを一覧表示 |
+| `ダッシュボード見せて` | HTML ダッシュボード生成（Chart.js、ダークテーマ） |
+| `この設計にした理由を記録` | ADR（Architecture Decision Record）を追加 |
+| `全プロジェクトの状態` | プロジェクト横断ポートフォリオビュー |
+
+---
+
+## MCP ツール一覧（15ツール）
+
+### プロジェクト管理
+
+| ツール | 説明 |
+|---|---|
+| `pm_init` | `.pm/` 作成 + レジストリ登録 + プロジェクト情報推定 |
+| `pm_status` | フェーズ進捗、タスク集計、ブロッカー、ベロシティ |
+| `pm_tasks` | タスク一覧（status / phase / priority / tag でフィルタ） |
+| `pm_add_task` | タスク追加（ID自動採番: `MYAPP-001` 形式） |
+| `pm_update_task` | ステータス・優先度・ノート・blocked_by を更新 |
+| `pm_next` | 推薦タスク（blocked / 依存未完了を除外） |
+| `pm_blockers` | ブロック中のタスクを全プロジェクトから一覧 |
+
+### 記録
+
+| ツール | 説明 |
+|---|---|
+| `pm_log` | 日次ログ記録（progress / decision / blocker / note / milestone） |
+| `pm_add_decision` | ADR 追加（context、decision、consequences を構造化） |
+
+### 分析
+
+| ツール | 説明 |
+|---|---|
+| `pm_velocity` | 週次ベロシティ + トレンド判定（上昇 / 下降 / 横ばい） |
+| `pm_risks` | リスク自動検知：期限超過、長期未更新、長期ブロック |
+
+### 可視化
+
+| ツール | 説明 |
+|---|---|
+| `pm_dashboard` | HTML ダッシュボード（単体プロジェクト or ポートフォリオ） |
+
+### ディスカバリー
+
+| ツール | 説明 |
+|---|---|
+| `pm_discover` | ディレクトリ配下の `.pm/` プロジェクトをスキャン・自動登録 |
+| `pm_cleanup` | レジストリの無効パスを除去 |
+| `pm_list` | 登録プロジェクト一覧 |
+
+---
+
+## データ構造
+
+`.pm/` ディレクトリにプレーン YAML で保存:
+
+```
+your-project/
+└── .pm/
+    ├── project.yaml        # プロジェクトメタ情報
+    ├── tasks.yaml          # タスク（ステータス・優先度・依存関係）
+    ├── decisions.yaml      # ADR (Architecture Decision Records)
+    ├── milestones.yaml     # マイルストーン定義
+    ├── risks.yaml          # リスク・ブロッカー
+    └── daily/
+        └── 2026-04-08.yaml # 日次ログ（自動生成）
+```
+
+`~/.pm/registry.yaml` が全プロジェクトのグローバルインデックスです。
+
+すべてのファイルは人間が読め、手動編集しても壊れません。
+
+---
+
+## CLAUDE.md 統合
+
+プロジェクトの `CLAUDE.md` に以下を追加すると、セッション中の PM 操作が自動化されます:
+
+```markdown
+## PM Server 自動行動ルール（必ず従うこと）
+
+### セッション開始時（最初の応答の前に必ず実行）
+1. pm_status でプロジェクトの現在の進捗を表示する
+2. pm_next で次に着手すべきタスクを3件表示する
+3. ブロッカーや期限超過があれば警告する
+
+### タスクに着手する前
+1. pm_update_task で該当タスクを in_progress に変更する
+
+### タスク完了時（コードが動作確認できたら）
+1. pm_update_task で done に変更する
+2. pm_log に完了内容を記録する
+3. pm_next で次の推薦タスクを表示する
+4. アトミックコミットを作成する
+
+### コーディングセッション終了時
+1. 進行中のタスクの状態を確認し、必要に応じて更新する
+2. pm_log にセッションの成果を記録する
+3. 未コミットの変更があればコミットする
+```
+
+---
+
+## CLI コマンド
+
+```bash
+pm-server install       # Claude Code に MCP サーバーを登録
+pm-server uninstall     # MCP サーバー登録を解除
+pm-server serve         # MCP Server 起動（Claude Code が自動で呼び出す）
+pm-server discover .    # .pm/ を持つプロジェクトをスキャン
+pm-server status        # ターミナルからステータス確認
+pm-server migrate       # pm-agent からの移行（MCP 登録の切り替え）
+```
+
+---
+
+## アーキテクチャ
+
+```
+Claude Code Session
+  │
+  ├── CLAUDE.md 自動行動ルール
+  │
+  └── MCP Server (stdio)
+        └── pm-server serve
+              │
+              ├── server.py    → 15 MCP ツール (FastMCP)
+              ├── models.py    → Pydantic v2 データモデル
+              ├── storage.py   → YAML 読み書き
+              ├── velocity.py  → ベロシティ計算・リスク検知
+              ├── dashboard.py → HTML/テキスト ダッシュボード (Jinja2)
+              ├── discovery.py → プロジェクト情報自動推定
+              └── installer.py → claude mcp add ラッパー
+                    │
+                    ├── project-A/.pm/
+                    ├── project-B/.pm/
+                    └── ~/.pm/registry.yaml
+```
+
+---
+
+## pm-agent からの移行
+
+以前の `pm-agent` パッケージから移行する場合:
+
+```bash
+pip uninstall pm-agent
+pip install pm-server
+pm-server migrate       # MCP 登録を pm-agent → pm-server に切り替え
+# Claude Code を再起動
+```
+
+`migrate` コマンドの実行内容:
+- 旧 `pm-agent` の MCP 登録を解除
+- 新 `pm-server` を MCP サーバーとして登録
+- `~/.pm/registry.yaml` の整合性チェック
+- `CLAUDE.md` 内の `pm-agent` への言及があれば警告
+
+`.pm/` ディレクトリのデータは**そのまま使えます** — データ移行は不要です。
+
+---
+
+## 動作要件
+
+- Python 3.11+
+- Claude Code（MCP サポート付き）
+
+### 依存パッケージ
+
+- [FastMCP](https://github.com/jlowin/fastmcp) — MCP サーバーフレームワーク
+- [Pydantic](https://docs.pydantic.dev/) v2 — データバリデーション
+- [PyYAML](https://pyyaml.org/) — データ永続化
+- [Click](https://click.palletsprojects.com/) — CLI フレームワーク
+- [Jinja2](https://jinja.palletsprojects.com/) — ダッシュボードテンプレート
+
+---
+
+## 開発
+
+```bash
+git clone https://github.com/code-retriever/pm-server.git
+cd pm-server
+pip install -e ".[dev]"
+pytest                  # 115 テスト
+ruff check src/         # リント
+ruff format src/        # フォーマット
+```
+
+---
+
+## 設計原則
+
+1. **Zero Configuration** — `pip install` + 1コマンドで完了
+2. **Auto-everything** — 検出・登録・推定はすべて自動
+3. **Git-friendly** — プレーンテキスト YAML、`git diff` で追跡可能
+4. **Human-readable** — 手動編集しても壊れない
+5. **AI-native** — Claude Code が自然に読み書きできるフォーマット
+6. **Non-invasive** — `.pm/` を追加するだけ。プロジェクト構造を変更しない
+
+---
+
+## ライセンス
+
+MIT — Shinichi Nakazato / FLC design co., ltd.
